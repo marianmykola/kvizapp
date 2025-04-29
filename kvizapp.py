@@ -1,35 +1,27 @@
+from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
 
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes
-
-BOT_TOKEN = "8070824455:AAG-y_oSvl78o8wq3jKr_VWGsQlBnQ6Bkkc"
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [KeyboardButton(text="Открыть мини-приложение", web_app=WebAppInfo(url="https://kvizapp.vercel.app"))]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Нажми кнопку ниже:", reply_markup=reply_markup)
-
-app = Application.builder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-
-app.run_polling()
-
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes
-
-BOT_TOKEN = "8070824455:AAG-y_oSvl78o8wq3jKr_VWGsQlBnQ6Bkkc"
+TOKEN = "8070824455:AAG-y_oSvl78o8wq3jKr_VWGsQlBnQ6Bkkc"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [KeyboardButton(text="Открыть мини-приложение", web_app=WebAppInfo(url="https://kvizapp.vercel.app"))]
+        [KeyboardButton(text="Открыть Квиз", web_app=WebAppInfo(url="https://kvizapp.vercel.app"))]
     ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Нажми кнопку ниже:", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "Нажми кнопку чтобы открыть квиз!",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    )
 
-app = Application.builder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = update.message.web_app_data.data
+    await update.message.reply_text(f"Ты отправил: {data}")
 
-app.run_polling()
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+    app.run_polling()
 
+if __name__ == "__main__":
+    main()

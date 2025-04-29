@@ -1,75 +1,245 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Добро пожаловать, Норика!</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f8f1f1;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku for Telegram</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
 
-        .header {
-            background-color: #ff66b2;
-            color: white;
-            padding: 50px 0;
-        }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
 
-        .header h1 {
-            font-size: 3rem;
-            margin: 0;
-        }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 40px);
+      gap: 0;
+      justify-content: center;
+      margin: 20px 0;
+    }
 
-        .welcome-text {
-            font-size: 1.5rem;
-            margin-top: 20px;
-            color: #444;
-        }
+    .grid input {
+      width: 40px;
+      height: 40px;
+      text-align: center;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
 
-        .image-container {
-            margin-top: 30px;
-        }
+    .grid input[readonly] {
+      background-color: #e0e0e0;
+      font-weight: bold;
+    }
 
-        .cat-image {
-            width: 300px;
-            height: auto;
-            border-radius: 15px;
-        }
+    .grid input {
+      border: 1px solid #ccc;
+    }
 
-        .footer {
-            background-color: #ff66b2;
-            color: white;
-            padding: 20px;
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            text-align: center;
-        }
+    .grid input {
+      box-sizing: border-box;
+    }
 
-        .footer p {
-            margin: 0;
-            font-size: 1rem;
-        }
-    </style>
+    .grid input:nth-child(3n) {
+      border-right: 2px solid #000;
+    }
+
+    .grid input:nth-child(n+19):nth-child(-n+27),
+    .grid input:nth-child(n+46):nth-child(-n+54) {
+      border-bottom: 2px solid #000;
+    }
+
+    .grid input:nth-child(9n+1),
+    .grid input:nth-child(9n+4),
+    .grid input:nth-child(9n+7) {
+      border-left: 2px solid #000;
+    }
+
+    .grid input:nth-child(-n+9) {
+      border-top: 2px solid #000;
+    }
+
+    .grid input[data-box="0"],
+    .grid input[data-box="2"],
+    .grid input[data-box="6"],
+    .grid input[data-box="8"] {
+      background-color: #f9f9ff;
+    }
+
+    .controls button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      background-color: #0088cc;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background-color: #0077b3;
+    }
+
+    .number-picker {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .number-picker button {
+      width: 40px;
+      height: 40px;
+      margin: 2px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #eee;
+      cursor: pointer;
+    }
+
+    .number-picker button:hover {
+      background: #ddd;
+    }
+  </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>Добро пожаловать, Норика!</h1>
-        <p class="welcome-text">Мы рады видеть тебя! Наслаждайся нашим приложением и делай его своим!</p>
+  <div class="container">
+    <h1>Судоку</h1>
+    <div id="sudoku-grid" class="grid"></div>
+    <div class="controls">
+      <button onclick="checkSudoku()">Проверить</button>
+      <button onclick="resetSudoku()">Сбросить</button>
     </div>
+    <div id="number-picker" class="number-picker"></div>
+  </div>
 
-    <div class="image-container">
-        <img src="https://avatars.dzeninfra.ru/get-zen-logos/1597769/pub_62335e84c99767773ab63caa_62335fcc475b2947fc26079d/orig" alt="Кошка Лана" class="cat-image">
-    </div>
+  <script>
+    const initialPuzzle = [
+      5, 3, '', '', 7, '', '', '', '',
+      6, '', '', 1, 9, 5, '', '', '',
+      '', 9, 8, '', '', '', '', 6, '',
+      8, '', '', '', 6, '', '', '', 3,
+      4, '', '', 8, '', 3, '', '', 1,
+      7, '', '', '', 2, '', '', '', 6,
+      '', 6, '', '', '', '', 2, 8, '',
+      '', '', '', 4, 1, 9, '', '', 5,
+      '', '', '', '', 8, '', '', 7, 9
+    ];
 
-    <div class="footer">
-        <p>Фанатка Ланы из Roblox!</p>
-    </div>
+    let selectedCell = null;
 
+    function createSudokuGrid() {
+      const grid = document.getElementById('sudoku-grid');
+      grid.innerHTML = '';
+      for (let i = 0; i < 81; i++) {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'text');
+        input.setAttribute('maxlength', '1');
+
+        const row = Math.floor(i / 9);
+        const col = i % 9;
+        const box = Math.floor(row / 3) * 3 + Math.floor(col / 3);
+        input.setAttribute('data-box', box);
+
+        if (initialPuzzle[i] !== '') {
+          input.value = initialPuzzle[i];
+          input.setAttribute('readonly', 'true');
+        } else {
+          input.addEventListener('focus', () => {
+            selectedCell = input;
+          });
+        }
+
+        grid.appendChild(input);
+      }
+    }
+
+    function createNumberPicker() {
+      const picker = document.getElementById('number-picker');
+      for (let i = 1; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.addEventListener('click', () => {
+          if (selectedCell) {
+            selectedCell.value = i;
+          }
+        });
+        picker.appendChild(btn);
+      }
+      const clearBtn = document.createElement('button');
+      clearBtn.textContent = '✖';
+      clearBtn.addEventListener('click', () => {
+        if (selectedCell) {
+          selectedCell.value = '';
+        }
+      });
+      picker.appendChild(clearBtn);
+    }
+
+    function resetSudoku() {
+      const cells = document.querySelectorAll('#sudoku-grid input');
+      cells.forEach((cell, index) => {
+        if (!cell.hasAttribute('readonly')) {
+          cell.value = '';
+        }
+      });
+    }
+
+    function checkSudoku() {
+      const cells = Array.from(document.querySelectorAll('#sudoku-grid input'));
+      const values = cells.map(cell => cell.value);
+
+      const getRow = (r) => values.slice(r * 9, r * 9 + 9);
+      const getCol = (c) => values.filter((_, i) => i % 9 === c);
+      const getBox = (b) => {
+        const box = [];
+        const startRow = Math.floor(b / 3) * 3;
+        const startCol = (b % 3) * 3;
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            box.push(values[(startRow + r) * 9 + (startCol + c)]);
+          }
+        }
+        return box;
+      };
+
+      const isValid = (group) => {
+        const nums = group.filter(val => val !== '').map(Number);
+        return nums.length === new Set(nums).size && nums.every(n => n >= 1 && n <= 9);
+      };
+
+      for (let i = 0; i < 9; i++) {
+        if (!isValid(getRow(i)) || !isValid(getCol(i)) || !isValid(getBox(i))) {
+          alert('Неверное решение!');
+          return;
+        }
+      }
+
+      alert('Поздравляем! Судоку решена правильно.');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      Telegram.WebApp.expand();
+      createSudokuGrid();
+      createNumberPicker();
+    });
+  </script>
 </body>
 </html>
