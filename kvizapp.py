@@ -33,6 +33,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = update.message.web_app_data.data
     await update.message.reply_text(f"Ты отправил: {data}")
+# kvizapp.py
+
+def handler(request):
+    # request.query, request.json, etc.
+    name = request.query.get("name", "world")
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "text/plain"},
+        "body": f"Hello, {name}!",
+    }
 
 # Запуск бота
 def main():
