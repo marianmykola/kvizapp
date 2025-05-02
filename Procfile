@@ -1,1 +1,0 @@
-start: python kvizapp.py
